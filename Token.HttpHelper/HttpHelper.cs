@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -50,11 +51,7 @@ namespace TokenHelper
         /// <returns></returns>
         public async Task<T?> GetAsync<T>(string url, ResponseMessageHandling? _headers = null) where T : class
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, url)
-            {
-                Version = _http.DefaultRequestVersion,
-                VersionPolicy = _http.DefaultVersionPolicy
-            };
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
             _requestMessage?.Invoke(request);
             var message = await _http.SendAsync(request);
             _headers?.Invoke(message);
@@ -69,11 +66,7 @@ namespace TokenHelper
         /// <returns></returns>
         public async Task<string> GetAsync(string url, ResponseMessageHandling? _headers = null)
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, url)
-            {
-                Version = _http.DefaultRequestVersion,
-                VersionPolicy = _http.DefaultVersionPolicy
-            };
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
             _requestMessage?.Invoke(request);
             var message = await _http.SendAsync(request);
             _headers?.Invoke(message);
@@ -88,11 +81,7 @@ namespace TokenHelper
         /// <returns></returns>
         public async Task<Stream> GetStreamAsync(string url, ResponseMessageHandling? _headers = null)
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, url)
-            {
-                Version = _http.DefaultRequestVersion,
-                VersionPolicy = _http.DefaultVersionPolicy
-            };
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
             _requestMessage?.Invoke(request);
             var message = await _http.SendAsync(request);
             _headers?.Invoke(message);
@@ -109,9 +98,7 @@ namespace TokenHelper
         /// <returns></returns>
         public async Task<T?> PostAsync<T>(string url, string value, ResponseMessageHandling? _headers = null) where T : class
         {
-            HttpRequestMessage request = new(HttpMethod.Post, url);
-            request.Version = _http.DefaultRequestVersion;
-            request.VersionPolicy = _http.DefaultVersionPolicy;
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, url);
             request.Content = new StringContent(value, Encoding.UTF8, _mediaType);
             _requestMessage?.Invoke(request);
             var message = await _http.SendAsync(request);
@@ -141,9 +128,7 @@ namespace TokenHelper
         /// <returns></returns>
         public async Task<string> PostAsync(string url, string value, ResponseMessageHandling? _headers = null)
         {
-            HttpRequestMessage request = new(HttpMethod.Post, url);
-            request.Version = _http.DefaultRequestVersion;
-            request.VersionPolicy = _http.DefaultVersionPolicy;
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, url);
             request.Content = new StringContent(JsonConvert.SerializeObject(value), Encoding.UTF8, _mediaType);
             _requestMessage?.Invoke(request);
             var message = await _http.SendAsync(request);
@@ -169,11 +154,9 @@ namespace TokenHelper
         /// <param name="url"></param>
         /// <param name="_headers">响应请求体信息</param>
         /// <returns></returns>
-        public async Task<T?> DeleteAsync<T>(string url, ResponseMessageHandling? _headers = null)
+        public async Task<T> DeleteAsync<T>(string url, ResponseMessageHandling? _headers = null)
         {
-            HttpRequestMessage request = new(HttpMethod.Delete, url);
-            request.Version = _http.DefaultRequestVersion;
-            request.VersionPolicy = _http.DefaultVersionPolicy;
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Delete, url);
             _requestMessage?.Invoke(request);
             var message = await _http.SendAsync(request);
             _headers?.Invoke(message);
@@ -188,9 +171,7 @@ namespace TokenHelper
         /// <returns></returns>
         public async Task<string> DeleteAsync(string url, ResponseMessageHandling? _headers = null)
         {
-            HttpRequestMessage request = new(HttpMethod.Delete, url);
-            request.Version = _http.DefaultRequestVersion;
-            request.VersionPolicy = _http.DefaultVersionPolicy;
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Delete, url);
             _requestMessage?.Invoke(request);
             var message = await _http.SendAsync(request);
             _headers?.Invoke(message);
@@ -205,11 +186,9 @@ namespace TokenHelper
         /// <param name="value"></param>
         /// <param name="_headers">响应请求体信息</param>
         /// <returns></returns>
-        public async Task<T?> PutAsync<T>(string url, object value, ResponseMessageHandling? _headers = null)
+        public async Task<T> PutAsync<T>(string url, object value, ResponseMessageHandling? _headers = null)
         {
-            HttpRequestMessage request = new(HttpMethod.Put, url);
-            request.Version = _http.DefaultRequestVersion;
-            request.VersionPolicy = _http.DefaultVersionPolicy;
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Put, url);
             request.Content = new StringContent(JsonConvert.SerializeObject(value), Encoding.UTF8, _mediaType);
             _requestMessage?.Invoke(request);
             var message = await _http.SendAsync(request);
@@ -226,9 +205,7 @@ namespace TokenHelper
         /// <returns></returns>
         public async Task<string> PutAsync(string url, object value, ResponseMessageHandling? _headers = null)
         {
-            HttpRequestMessage request = new(HttpMethod.Put, url);
-            request.Version = _http.DefaultRequestVersion;
-            request.VersionPolicy = _http.DefaultVersionPolicy;
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Put, url);
             request.Content = new StringContent(JsonConvert.SerializeObject(value), Encoding.UTF8, _mediaType);
             _requestMessage?.Invoke(request);
             var message = await _http.SendAsync(request);
