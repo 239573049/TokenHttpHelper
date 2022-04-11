@@ -1,11 +1,10 @@
 ﻿using Newtonsoft.Json;
-using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Net.Http;
-using System.Net.Http.Json;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using static System.Net.WebRequestMethods;
+using Token.HttpHelper;
 using static TokenHelper.DelegaCommon;
 
 namespace TokenHelper
@@ -13,205 +12,135 @@ namespace TokenHelper
     public class HttpHelper
     {
         /// <summary>
+        /// 全局cookie
+        /// </summary>
+        public CookieContainer cookie = new CookieContainer();
+        /// <summary>
         /// 请求体拦截
         /// </summary>
-        internal ResponseMessageHandling? _responseMessage;
+        public ResponseMessageHandling? _responseMessage;
         /// <summary>
         /// 响应拦截器
         /// </summary>
-        internal RequestMessageHandling? _requestMessage;
-        internal HttpClient _http;
-        /// <summary>
-        /// 请求格式
-        /// </summary>
-        public string _mediaType { get; set; } ="application/json";
-        /// <summary>
-        /// 默认创建
-        /// </summary>
-        public HttpHelper()
+        public RequestMessageHandling? _requestMessage;
+
+        public Dictionary<string,string> Headers { get; set; }=new Dictionary<string,string>();
+        private HttpWebRequest CreateHttpWebRequest(string url,string? content =null, HttpMethodEnum method=HttpMethodEnum.GET)
         {
-            _http = HttpClientFactory.Create();
+            var req = (HttpWebRequest) WebRequest.Create(url);
+            req.Method = method.ToString();
+            req.CookieContainer = cookie;
+            req.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.60 Safari/537.36 Edg/100.0.1185.29";
+            req.Timeout = 60000;
+            req.ContentType = "application/json;charset=UTF-8";
+            if (Headers != null)
+            {
+                foreach (var d in Headers)
+                {
+                    req.Headers.Add(d.Key, d.Value);
+                }
+            }
+            byte[] data = Encoding.UTF8.GetBytes(content);
+            req.ContentLength = data.Length;
+            if (method != HttpMethodEnum.GET)
+            {
+                using Stream reqStream = req.GetRequestStream();
+                reqStream.Write(data, 0, data.Length);
+                reqStream.Close();
+            }
+            return req;
         }
 
+        private HttpWebRequest CreateHttpWebRequest(string url, object content, HttpMethodEnum method)=>
+            CreateHttpWebRequest(url, JsonConvert.SerializeObject(content), method);
+
+        /// <summary>
+        /// 获取响应内容
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        private async Task<T> GetResponseAsync<T>(HttpWebRequest request)
+        {
+            return await Task.Run(() =>
+            {
+                string result = string.Empty;
+                HttpWebResponse resp = (HttpWebResponse) request.GetResponse();
+                Stream stream = resp.GetResponseStream();
+
+                //获取内容
+                using (StreamReader reader = new StreamReader(stream, Encoding.UTF8))
+                {
+                    result = reader.ReadToEnd();
+                }
+                return JsonConvert.DeserializeObject<T>(result)!;
+            });
+        }
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="http"></param>
-        public HttpHelper(HttpClient http)
+        /// <param name="url"></param>
+        /// <returns></returns>
+        public async Task<T> GetAsync<T>(string url)
         {
-            _http = http;
+            return await GetResponseAsync<T>(CreateHttpWebRequest(url));
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public async Task<T> PostAsync<T>(string url, string content)
+        {
+            return await GetResponseAsync<T>(CreateHttpWebRequest(url, content, HttpMethodEnum.POST));
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public async Task<T> PostAsync<T>(string url, object content)
+        {
+            return await GetResponseAsync<T>(CreateHttpWebRequest(url, content, HttpMethodEnum.POST));
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public async Task<T> PutAsync<T>(string url, string content)
+        {
+            return await GetResponseAsync<T>(CreateHttpWebRequest(url, content, HttpMethodEnum.PUT));
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public async Task<T> PutAsync<T>(string url, object content)
+        {
+            return await GetResponseAsync<T>(CreateHttpWebRequest(url, content, HttpMethodEnum.PUT));
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public async Task<T> DeleteAsync<T>(string url, string content)
+        {
+            return await GetResponseAsync<T>(CreateHttpWebRequest(url, content, HttpMethodEnum.DELETE));
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public async Task<T> DeleteAsync<T>(string url, object content)
+        {
+            return await GetResponseAsync<T>(CreateHttpWebRequest(url, content, HttpMethodEnum.DELETE));
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public async Task<T> MethodAsync<T>(string url, object content, HttpMethodEnum httpMethod)
+        {
+            return await GetResponseAsync<T>(CreateHttpWebRequest(url, content, httpMethod));
         }
 
-        /// <summary>
-        /// 发起Get请求（异步）
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="url"></param>
-        /// <param name="_headers">响应请求体信息</param>
-        /// <returns></returns>
-        public async Task<T?> GetAsync<T>(string url, ResponseMessageHandling? _headers = null) where T : class
-        {
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
-            _requestMessage?.Invoke(request);
-            var message = await _http.SendAsync(request);
-            _headers?.Invoke(message);
-            _responseMessage?.Invoke(message);
-            return await message.Content.ReadFromJsonAsync<T?>();
-        }
-        /// <summary>
-        /// 发起Get请求（异步）
-        /// </summary>
-        /// <param name="url"></param>
-        /// <param name="_headers">响应请求体信息</param>
-        /// <returns></returns>
-        public async Task<string> GetAsync(string url, ResponseMessageHandling? _headers = null)
-        {
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
-            _requestMessage?.Invoke(request);
-            var message = await _http.SendAsync(request);
-            _headers?.Invoke(message);
-            _responseMessage?.Invoke(message);
-            return await message.Content.ReadAsStringAsync();
-        }
-        /// <summary>
-        /// 发起Get请求（异步）
-        /// </summary>
-        /// <param name="url"></param>
-        /// <param name="_headers">响应请求体信息</param>
-        /// <returns></returns>
-        public async Task<Stream> GetStreamAsync(string url, ResponseMessageHandling? _headers = null)
-        {
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
-            _requestMessage?.Invoke(request);
-            var message = await _http.SendAsync(request);
-            _headers?.Invoke(message);
-            _responseMessage?.Invoke(message);
-            return await message.Content.ReadAsStreamAsync();
-        }
-        /// <summary>
-        /// 发起post请求（异步）
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="url"></param>
-        /// <param name="value"></param>
-        /// <param name="_headers">响应请求体信息</param>
-        /// <returns></returns>
-        public async Task<T?> PostAsync<T>(string url, string value, ResponseMessageHandling? _headers = null) where T : class
-        {
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, url);
-            request.Content = new StringContent(value, Encoding.UTF8, _mediaType);
-            _requestMessage?.Invoke(request);
-            var message = await _http.SendAsync(request);
-            _headers?.Invoke(message);
-            _responseMessage?.Invoke(message);
-            return await message.Content.ReadFromJsonAsync<T>();
-        }
-        /// <summary>
-        /// 发起post请求（异步）
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="url"></param>
-        /// <param name="value"></param>
-        /// <param name="_headers"></param>
-        /// <returns></returns>
-        public async Task<T?> PostAsync<T>(string url, object value, ResponseMessageHandling? _headers = null) where T : class
-        {
-            return await PostAsync<T>(url, JsonConvert.SerializeObject(value), _headers);
-        }
-
-        /// <summary>
-        /// 发起post请求（异步）
-        /// </summary>
-        /// <param name="url"></param>
-        /// <param name="value"></param>
-        /// <param name="_headers">响应请求体信息</param>
-        /// <returns></returns>
-        public async Task<string> PostAsync(string url, string value, ResponseMessageHandling? _headers = null)
-        {
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, url);
-            request.Content = new StringContent(JsonConvert.SerializeObject(value), Encoding.UTF8, _mediaType);
-            _requestMessage?.Invoke(request);
-            var message = await _http.SendAsync(request);
-            _headers?.Invoke(message);
-            _responseMessage?.Invoke(message);
-            return await message.Content.ReadAsStringAsync();
-        }
-        /// <summary>
-        /// 发起post请求（异步）
-        /// </summary>
-        /// <param name="url"></param>
-        /// <param name="value"></param>
-        /// <param name="_headers"></param>
-        /// <returns></returns>
-        public async Task<string> PostAsync(string url, object value, ResponseMessageHandling? _headers = null)
-        {
-            return await PostAsync(url, JsonConvert.SerializeObject(value), _headers);
-        }
-        /// <summary>
-        /// 发起Delete请求（异步）
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="url"></param>
-        /// <param name="_headers">响应请求体信息</param>
-        /// <returns></returns>
-        public async Task<T> DeleteAsync<T>(string url, ResponseMessageHandling? _headers = null)
-        {
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Delete, url);
-            _requestMessage?.Invoke(request);
-            var message = await _http.SendAsync(request);
-            _headers?.Invoke(message);
-            _responseMessage?.Invoke(message);
-            return await message.Content.ReadFromJsonAsync<T>();
-        }
-        /// <summary>
-        /// 发起Delete请求（异步）
-        /// </summary>
-        /// <param name="url"></param>
-        /// <param name="_headers">响应请求体信息</param>
-        /// <returns></returns>
-        public async Task<string> DeleteAsync(string url, ResponseMessageHandling? _headers = null)
-        {
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Delete, url);
-            _requestMessage?.Invoke(request);
-            var message = await _http.SendAsync(request);
-            _headers?.Invoke(message);
-            _responseMessage?.Invoke(message);
-            return await message.Content.ReadAsStringAsync();
-        }
-        /// <summary>
-        /// 发起Put请求（异步）
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="url"></param>
-        /// <param name="value"></param>
-        /// <param name="_headers">响应请求体信息</param>
-        /// <returns></returns>
-        public async Task<T> PutAsync<T>(string url, object value, ResponseMessageHandling? _headers = null)
-        {
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Put, url);
-            request.Content = new StringContent(JsonConvert.SerializeObject(value), Encoding.UTF8, _mediaType);
-            _requestMessage?.Invoke(request);
-            var message = await _http.SendAsync(request);
-            _headers?.Invoke(message);
-            _responseMessage?.Invoke(message);
-            return await message.Content.ReadFromJsonAsync<T>();
-        }
-        /// <summary>
-        /// 发起Put请求（异步）
-        /// </summary>
-        /// <param name="url"></param>
-        /// <param name="value"></param>
-        /// <param name="_headers">响应请求体信息</param>
-        /// <returns></returns>
-        public async Task<string> PutAsync(string url, object value, ResponseMessageHandling? _headers = null)
-        {
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Put, url);
-            request.Content = new StringContent(JsonConvert.SerializeObject(value), Encoding.UTF8, _mediaType);
-            _requestMessage?.Invoke(request);
-            var message = await _http.SendAsync(request);
-            _headers?.Invoke(message);
-            _responseMessage?.Invoke(message);
-            return await message.Content.ReadAsStringAsync();
-        }
     }
 }
