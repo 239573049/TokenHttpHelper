@@ -48,6 +48,7 @@ namespace TokenHelper
                 reqStream.Write(data, 0, data.Length);
                 reqStream.Close();
             }
+            _responseMessage?.Invoke(req);
             return req;
         }
 
@@ -66,6 +67,7 @@ namespace TokenHelper
             {
                 string result = string.Empty;
                 HttpWebResponse resp = (HttpWebResponse) request.GetResponse();
+                _requestMessage?.Invoke(resp);
                 Stream stream = resp.GetResponseStream();
 
                 //获取内容
@@ -73,6 +75,7 @@ namespace TokenHelper
                 {
                     result = reader.ReadToEnd();
                 }
+
                 return JsonConvert.DeserializeObject<T>(result)!;
             });
         }
