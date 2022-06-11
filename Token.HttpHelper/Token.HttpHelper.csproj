@@ -7,12 +7,14 @@
     <Version>1.1.0</Version>
     <Authors>Token</Authors>
     <Company>Token</Company>
-    <Description>一个简易的Http封装工具</Description>
+    <Description>一个简易的Http封装工具
+可以写简易爬虫</Description>
     <PackageProjectUrl>https://github.com/239573049/TokenHttpHelper</PackageProjectUrl>
     <PackageIcon>logo.jpg</PackageIcon>
     <RepositoryUrl>https://github.com/239573049/TokenHttpHelper</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReleaseNotes>重构框架操作使用老版WebHttp</PackageReleaseNotes>
+    <PackageVersion>1.2.0</PackageVersion>
   </PropertyGroup>
 
   <ItemGroup>

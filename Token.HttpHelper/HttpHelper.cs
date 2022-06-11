@@ -40,13 +40,17 @@ namespace TokenHelper
                     req.Headers.Add(d.Key, d.Value);
                 }
             }
-            byte[] data = Encoding.UTF8.GetBytes(content);
-            req.ContentLength = data.Length;
-            if (method != HttpMethodEnum.GET)
+
+            if (!string.IsNullOrWhiteSpace(content))
             {
-                using Stream reqStream = req.GetRequestStream();
-                reqStream.Write(data, 0, data.Length);
-                reqStream.Close();
+                byte[] data = Encoding.UTF8.GetBytes(content);
+                req.ContentLength = data.Length;
+                if (method != HttpMethodEnum.GET)
+                {
+                    using Stream reqStream = req.GetRequestStream();
+                    reqStream.Write(data, 0, data.Length);
+                    reqStream.Close();
+                }
             }
             _responseMessage?.Invoke(req);
             return req;
@@ -79,6 +83,33 @@ namespace TokenHelper
                 return JsonConvert.DeserializeObject<T>(result)!;
             });
         }
+        
+        
+        /// <summary>
+        /// 获取响应内容
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        private async Task<string> GetResponseAsync(HttpWebRequest request)
+        {
+            return await Task.Run(() =>
+            {
+                string result = string.Empty;
+                var resp = (HttpWebResponse) request.GetResponse();
+                _requestMessage?.Invoke(resp);
+                var stream = resp.GetResponseStream();
+
+                //获取内容
+                using (StreamReader reader = new StreamReader(stream, Encoding.UTF8))
+                {
+                    result = reader.ReadToEnd();
+                }
+
+                return result;
+            });
+        }
+        
         /// <summary>
         /// 
         /// </summary>
@@ -88,6 +119,17 @@ namespace TokenHelper
         {
             return await GetResponseAsync<T>(CreateHttpWebRequest(url));
         }
+
+        /// <summary>
+        /// Get
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        public async Task<string> GetAsync(string url)
+        {
+            return await GetResponseAsync(CreateHttpWebRequest(url));
+        }
+
         /// <summary>
         /// 
         /// </summary>
